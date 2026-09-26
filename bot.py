@@ -1,4 +1,7 @@
 import logging
+import threading
+import os
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import (
     Update,
     InlineKeyboardButton,
@@ -20,7 +23,7 @@ from telegram.ext import (
 
 logging.basicConfig(level=logging.INFO)
 
-# توکن ربات
+# توکن ربات (توکن خود را اینجا قرار دهید)
 TOKEN = "8578324939:AAH3FBOsT8XijFMqu5bR8-lU8xWaMfqvVPE"
 
 # مشخصات کانال
@@ -29,14 +32,11 @@ CHANNEL_JOIN_LINK = "https://t.me/xyyje"
 
 # لینک‌های بازی‌ها
 GAMES = {
-    # شطرنج
     "chess_board": "https://lichess.org/analysis",
     "chess_ai": "https://lichess.org/?any#ai",
     "chess_friend": "https://lichess.org/?any#friend",
-    # سایر بازی‌ها
     "tictactoe": "https://playtictactoe.org/",
     "2048": "https://play2048.co/",
-    # ماربازی دارای دکمه‌های جهت‌نما لمسی روی صفحه مخصوص موبایل
     "snake": "https://playsnake.org/",
 }
 
@@ -50,44 +50,12 @@ def get_bottom_keyboard():
 # منوی شیشه‌ای کامل بازی‌ها
 def get_games_menu():
     keyboard = [
-        # بخش شطرنج
-        [
-            InlineKeyboardButton(
-                "♟ شطرنج: تخته لمسی دستی",
-                web_app=WebAppInfo(url=GAMES["chess_board"])
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🤖 شطرنج: بازی با هوش مصنوعی (AI)",
-                web_app=WebAppInfo(url=GAMES["chess_ai"])
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "👥 شطرنج: بازی دونفره با دوستان",
-                web_app=WebAppInfo(url=GAMES["chess_friend"])
-            )
-        ],
-        # بخش سایر بازی‌ها
-        [
-            InlineKeyboardButton(
-                "🐍 ماربازی کلاسیک (با کلیدهای جهتی ⬅️⬆️⬇️➡️)",
-                web_app=WebAppInfo(url=GAMES["snake"])
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "⭕❌ بازی دوز (Tic-Tac-Toe)",
-                web_app=WebAppInfo(url=GAMES["tictactoe"])
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🔢 بازی فکری 2048",
-                web_app=WebAppInfo(url=GAMES["2048"])
-            )
-        ],
+        [InlineKeyboardButton("♟ شطرنج: تخته لمسی دستی", web_app=WebAppInfo(url=GAMES["chess_board"]))],
+        [InlineKeyboardButton("🤖 شطرنج: بازی با هوش مصنوعی (AI)", web_app=WebAppInfo(url=GAMES["chess_ai"]))],
+        [InlineKeyboardButton("👥 شطرنج: بازی دونفره با دوستان", web_app=WebAppInfo(url=GAMES["chess_friend"]))],
+        [InlineKeyboardButton("🐍 ماربازی کلاسیک (با کلیدهای جهتی ⬅️⬆️⬇️➡️)", web_app=WebAppInfo(url=GAMES["snake"]))],
+        [InlineKeyboardButton("⭕❌ بازی دوز (Tic-Tac-Toe)", web_app=WebAppInfo(url=GAMES["tictactoe"]))],
+        [InlineKeyboardButton("🔢 بازی فکری 2048", web_app=WebAppInfo(url=GAMES["2048"]))],
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -139,7 +107,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await setup_menu_button(context.bot, update.effective_chat.id)
 
-    # بررسی عضویت
     if not await is_member(context, user_id):
         await update.message.reply_text(
             f"سلام {user_name} عزیز! 👋\n\n"
@@ -206,7 +173,22 @@ async def handle_bottom_buttons(update: Update, context: ContextTypes.DEFAULT_TY
             reply_markup=get_games_menu()
         )
 
+# تابع وب‌سرور برای زنده ماندن در Render
+def run_dummy_server():
+    class SimpleHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"Bot is running!")
+            
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(('0.0.0.0', port), SimpleHandler)
+    server.serve_forever()
+
 def main():
+    # راه‌اندازی وب‌سرور در پس‌زمینه
+    threading.Thread(target=run_dummy_server, daemon=True).start()
+
     app = Application.builder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
