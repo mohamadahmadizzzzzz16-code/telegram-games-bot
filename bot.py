@@ -24,7 +24,7 @@ from telegram.ext import (
 logging.basicConfig(level=logging.INFO)
 
 # توکن ربات (توکن خود را اینجا قرار دهید)
-TOKEN = "8578324939:AAH3FBOsT8XijFMqu5bR8-lU8xWaMfqvVPE"
+TOKEN = "8578324939:AAGItZRgCsimC-zCnmYDvu4kze1CaQux7II"
 
 # مشخصات کانال
 CHANNEL_USERNAME = "@xyyje"
